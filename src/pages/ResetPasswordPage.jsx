@@ -15,25 +15,40 @@ const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Handle the password reset flow
     const handlePasswordReset = async () => {
       const accessToken = searchParams.get('access_token');
       const refreshToken = searchParams.get('refresh_token');
+      const type = searchParams.get('type');
       
-      if (accessToken && refreshToken) {
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        
-        if (error) {
-          setError('Invalid or expired reset link');
+      // If no URL parameters at all, this is a direct page access (no error needed)
+      if (!accessToken && !refreshToken && !type) {
+        return;
+      }
+      
+      // Check if this is specifically a password recovery flow
+      if (type === 'recovery' && accessToken && refreshToken) {
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          
+          if (error) {
+            setError('Invalid or expired password reset link. Please request a new password reset email.');
+          }
+        } catch (err) {
+          setError('Error processing password reset link. Please try again.');
         }
+      } else if (accessToken || refreshToken) {
+        // If there are tokens but not a recovery type, this might be an email confirmation
+        // Redirect to the proper email confirmation handler
+        navigate('/confirm-email' + window.location.search);
+        return;
       }
     };
 
     handlePasswordReset();
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

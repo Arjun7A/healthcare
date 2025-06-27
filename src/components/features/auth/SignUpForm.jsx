@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/useAuth';
 import Button from '../../common/Button';
+import { resendConfirmationEmail } from '../../../utils/emailConfirmation';
 
 const SignUpForm = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ const SignUpForm = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [formValid, setFormValid] = useState(false);
+  const [showResendButton, setShowResendButton] = useState(false);
   const { signUp } = useAuth();
 
   // Validate form in real-time
@@ -37,24 +39,61 @@ const SignUpForm = () => {
     }
 
     try {
-      const { error: signUpError } = await signUp({
+      const { data, error: signUpError } = await signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
           },
+          // Use the current origin for the redirect
+          emailRedirectTo: `${window.location.origin}/confirm-email`,
         },
       });
 
       if (signUpError) throw signUpError;
 
-      setMessage('Account created successfully! Please check your email to confirm your account.');
+      // Check if user was created but needs email confirmation
+      if (data?.user && !data?.session) {
+        setMessage('Account created successfully! Please check your email (including spam folder) to confirm your account before signing in.');
+        setShowResendButton(true);
+      } else if (data?.user && data?.session) {
+        setMessage('Account created and signed in successfully!');
+        setShowResendButton(false);
+      } else {
+        setMessage('Account created successfully! Please check your email to confirm your account.');
+        setShowResendButton(true);
+      }
     } catch (err) {
-      setError(err.message || 'Failed to create account. Please try again.');
+      // Better error handling for common issues
+      if (err.message.includes('already registered')) {
+        setError('An account with this email already exists. Please try signing in instead.');
+      } else if (err.message.includes('email')) {
+        setError('Please enter a valid email address.');
+      } else if (err.message.includes('password')) {
+        setError('Password must be at least 6 characters long.');
+      } else {
+        setError(err.message || 'Failed to create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendEmail = async () => {
+    setLoading(true);
+    setError('');
+    setMessage('');
+    
+    const result = await resendConfirmationEmail(email);
+    
+    if (result.error) {
+      setError('Failed to resend email: ' + result.error);
+    } else {
+      setMessage('Confirmation email sent! Please check your inbox and spam folder.');
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -77,6 +116,26 @@ const SignUpForm = () => {
             <polyline points="16,8 10,14 8,12" stroke="currentColor" strokeWidth="2"/>
           </svg>
           {message}
+          {showResendButton && (
+            <button
+              type="button"
+              onClick={handleResendEmail}
+              disabled={loading || !email}
+              style={{
+                marginTop: '10px',
+                padding: '8px 16px',
+                background: 'transparent',
+                border: '1px solid #16a34a',
+                borderRadius: '6px',
+                color: '#16a34a',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: '500'
+              }}
+            >
+              Resend Email
+            </button>
+          )}
         </div>
       )}
 
@@ -203,6 +262,24 @@ const SignUpForm = () => {
           'Create Account'
         )}
       </button>
+
+      {showResendButton && (
+        <button
+          type="button"
+          onClick={handleResendEmail}
+          className="resend-btn"
+          disabled={loading}
+        >
+          {loading ? (
+            <span className="loading">
+              <div className="spinner"></div>
+              Resending...
+            </span>
+          ) : (
+            'Resend Confirmation Email'
+          )}
+        </button>
+      )}
     </form>
   );
 };

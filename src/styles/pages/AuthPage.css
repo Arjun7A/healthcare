@@ -656,6 +656,38 @@
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
 }
 
+/* Resend Email Button Styling */
+.resend-btn {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  color: #667eea;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.resend-btn:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.resend-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* =============================================
    RESPONSIVE DESIGN
    ============================================= */
