@@ -33,7 +33,7 @@ const DashboardPage = () => {
                 <div className="user-section">
                   <div className="user-info">
                     <span className="greeting">Welcome back,</span>
-                    <span className="username">{user.email.split('@')[0]}</span>
+                    <span className="username">{user.user_metadata?.full_name || user.email.split('@')[0]}</span>
                   </div>
                   <Button onClick={signOut} variant="outline" className="sign-out-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
