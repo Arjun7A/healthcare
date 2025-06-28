@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/useAuth';
 import Button from '../components/common/Button';
 import SymptomChecker from '../components/features/health/SymptomChecker';
+import MoodJournal from '../components/features/mood/MoodJournal';
+import MoodInsights from '../components/features/mood/MoodInsights';
+import MoodAnalytics from '../components/features/mood/MoodAnalytics';
 import '../styles/pages/DashboardPage.css';
 
 const DashboardPage = () => {
@@ -71,29 +74,39 @@ const DashboardPage = () => {
                   </div>
                   <div className="feature-content">
                     <h3>🩺 AI Symptom Checker</h3>
-                    <p>Advanced symptom analysis with Google AI integration</p>
+                    <p>Advanced symptom analysis with Groq AI integration</p>
                     <div className="feature-badges">
-                      <span className="badge">🧠 Google AI</span>
+                      <span className="badge">🧠 Groq AI</span>
                       <span className="badge">🌍 Multi-Language</span>
-                      <span className="badge">� PDF Reports</span>
+                      <span className="badge">📄 PDF Reports</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="feature-card secondary">
+                <div 
+                  className="feature-card secondary"
+                  onClick={() => setActiveSection('mood-journal')}
+                >
                   <div className="feature-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
                     </svg>
                   </div>
                   <div className="feature-content">
-                    <h3>💚 Health Monitoring</h3>
-                    <p>Track your health metrics and get insights</p>
-                    <div className="coming-soon">Coming Soon</div>
+                    <h3>� Mood Journal</h3>
+                    <p>Track your daily mood and emotions with insights</p>
+                    <div className="feature-badges">
+                      <span className="badge">📝 Daily Tracking</span>
+                      <span className="badge">📊 Analytics</span>
+                      <span className="badge">🎯 Insights</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="feature-card tertiary">
+                <div 
+                  className="feature-card tertiary"
+                  onClick={() => setActiveSection('mood-analytics')}
+                >
                   <div className="feature-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
@@ -101,9 +114,13 @@ const DashboardPage = () => {
                     </svg>
                   </div>
                   <div className="feature-content">
-                    <h3>📊 Health Analytics</h3>
-                    <p>Comprehensive health pattern analysis</p>
-                    <div className="coming-soon">Coming Soon</div>
+                    <h3>📊 Mood Analytics</h3>
+                    <p>Comprehensive mood pattern analysis and trends</p>
+                    <div className="feature-badges">
+                      <span className="badge">📈 Trends</span>
+                      <span className="badge">🎨 Charts</span>
+                      <span className="badge">🔍 Patterns</span>
+                    </div>
                   </div>
                 </div>
 
@@ -139,6 +156,42 @@ const DashboardPage = () => {
               </div>
               <div className="symptom-checker-container">
                 <SymptomChecker />
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'mood-journal' && (
+            <div className="section-content">
+              <div className="section-header">
+                <Button 
+                  onClick={() => setActiveSection('overview')} 
+                  variant="outline"
+                  className="back-btn"
+                >
+                  ← Back to Dashboard
+                </Button>
+                <h2>😊 Mood Journal</h2>
+              </div>
+              <div className="mood-journal-container">
+                <MoodJournal />
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'mood-analytics' && (
+            <div className="section-content">
+              <div className="section-header">
+                <Button 
+                  onClick={() => setActiveSection('overview')} 
+                  variant="outline"
+                  className="back-btn"
+                >
+                  ← Back to Dashboard
+                </Button>
+                <h2>📊 Mood Analytics</h2>
+              </div>
+              <div className="mood-analytics-container">
+                <MoodAnalytics />
               </div>
             </div>
           )}

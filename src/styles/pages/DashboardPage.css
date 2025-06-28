@@ -252,11 +252,43 @@
   transform: translateX(-4px);
 }
 
-.symptom-checker-container {
+/* Mood Component Containers */
+.mood-journal-container,
+.mood-analytics-container {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
+  padding: 2rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.mood-journal-container .mood-journal {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mood-analytics-container .mood-analytics {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Feature badges styling for mood cards */
+.feature-card .feature-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.feature-card .badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 /* Animations */
@@ -304,5 +336,11 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+  
+  .mood-journal-container,
+  .mood-analytics-container {
+    padding: 1rem;
+    margin-top: 0.5rem;
   }
 }

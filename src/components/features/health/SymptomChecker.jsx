@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../../common/Button';
+import APIKeyError from '../../common/APIKeyError';
 import { analyzeSymptoms, refineAnalysis, validateSymptoms } from '../../../lib/aiService';
+import { saveSymptomReport, saveDiagnosisLog, getSymptomReports } from '../../../services/symptomAPI';
+import { useAuth } from '../../../contexts/useAuth';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 const SymptomChecker = () => {
+  const { user } = useAuth();
+  
   // Form state
   const [symptoms, setSymptoms] = useState('');
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
@@ -45,7 +49,7 @@ const SymptomChecker = () => {
   const [showInsights, setShowInsights] = useState(false);
   const [aiInsights, setAiInsights] = useState(null);
   const [riskTrends, setRiskTrends] = useState([]);
-  const [printMode, setPrintMode] = useState(false);
+  const [printMode, setPrintMode] = useState(false); // Ensure print mode starts false
   const [showComparison, setShowComparison] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [expertMode, setExpertMode] = useState(false);
@@ -121,16 +125,68 @@ const SymptomChecker = () => {
 
   const t = (key) => translations[language]?.[key] || translations.en[key] || key;
 
-  // Common symptoms database for selector mode with categories
+  // Common symptoms database for selector mode with categories and icons
   const symptomCategories = {
-    'General': ['Fever', 'Fatigue', 'Weakness', 'Loss of appetite', 'Weight loss', 'Night sweats'],
-    'Head & Neck': ['Headache', 'Dizziness', 'Blurred vision', 'Ear pain', 'Sore throat', 'Neck stiffness'],
-    'Respiratory': ['Cough', 'Shortness of breath', 'Chest pain', 'Runny nose', 'Congestion', 'Wheezing'],
-    'Digestive': ['Nausea', 'Vomiting', 'Diarrhea', 'Constipation', 'Abdominal pain', 'Heartburn'],
-    'Musculoskeletal': ['Joint pain', 'Back pain', 'Muscle aches', 'Stiffness', 'Swelling'],
-    'Skin': ['Rash', 'Itching', 'Bruising', 'Swelling', 'Changes in skin color'],
-    'Neurological': ['Memory problems', 'Confusion', 'Numbness', 'Tingling', 'Seizures'],
-    'Mental Health': ['Anxiety', 'Depression', 'Sleep problems', 'Mood changes', 'Stress']
+    'General': [
+      { name: 'Fever', icon: '🌡️' },
+      { name: 'Fatigue', icon: '😴' },
+      { name: 'Weakness', icon: '💪' },
+      { name: 'Loss of appetite', icon: '🍽️' },
+      { name: 'Weight loss', icon: '⚖️' },
+      { name: 'Night sweats', icon: '💦' }
+    ],
+    'Head & Neck': [
+      { name: 'Headache', icon: '🤕' },
+      { name: 'Dizziness', icon: '😵' },
+      { name: 'Blurred vision', icon: '👁️' },
+      { name: 'Ear pain', icon: '👂' },
+      { name: 'Sore throat', icon: '🗣️' },
+      { name: 'Neck stiffness', icon: '🦴' }
+    ],
+    'Respiratory': [
+      { name: 'Cough', icon: '😷' },
+      { name: 'Shortness of breath', icon: '🫁' },
+      { name: 'Chest pain', icon: '💔' },
+      { name: 'Runny nose', icon: '👃' },
+      { name: 'Congestion', icon: '🤧' },
+      { name: 'Wheezing', icon: '🌬️' }
+    ],
+    'Digestive': [
+      { name: 'Nausea', icon: '🤢' },
+      { name: 'Vomiting', icon: '🤮' },
+      { name: 'Diarrhea', icon: '🚽' },
+      { name: 'Constipation', icon: '😣' },
+      { name: 'Abdominal pain', icon: '🤰' },
+      { name: 'Heartburn', icon: '🔥' }
+    ],
+    'Musculoskeletal': [
+      { name: 'Joint pain', icon: '🦴' },
+      { name: 'Back pain', icon: '🦵' },
+      { name: 'Muscle aches', icon: '💪' },
+      { name: 'Stiffness', icon: '🔒' },
+      { name: 'Swelling', icon: '🎈' }
+    ],
+    'Skin': [
+      { name: 'Rash', icon: '🔴' },
+      { name: 'Itching', icon: '🤚' },
+      { name: 'Bruising', icon: '🟣' },
+      { name: 'Swelling', icon: '🎈' },
+      { name: 'Changes in skin color', icon: '🌈' }
+    ],
+    'Neurological': [
+      { name: 'Memory problems', icon: '🧠' },
+      { name: 'Confusion', icon: '🤔' },
+      { name: 'Numbness', icon: '🖐️' },
+      { name: 'Tingling', icon: '⚡' },
+      { name: 'Seizures', icon: '⚠️' }
+    ],
+    'Mental Health': [
+      { name: 'Anxiety', icon: '😰' },
+      { name: 'Depression', icon: '😔' },
+      { name: 'Sleep problems', icon: '😴' },
+      { name: 'Mood changes', icon: '🎭' },
+      { name: 'Stress', icon: '😤' }
+    ]
   };
 
   const severityLevels = ['Mild', 'Moderate', 'Severe', 'Critical'];
@@ -145,26 +201,26 @@ const SymptomChecker = () => {
     { code: 'hi', name: 'हिंदी', flag: '🇮🇳' }
   ];
 
-  // Flatten symptomCategories into commonSymptoms for the grid
-  const commonSymptoms = Object.values(symptomCategories).flat();
+  // Keep the original categorized structure for the new UI
+  // (removed the old commonSymptoms flat array)
 
   // Add/remove symptoms in selector mode
-  const toggleSymptom = (symptom) => {
+  const toggleSymptom = (symptomName) => {
     setSelectedSymptoms(prev => {
-      const isSelected = prev.includes(symptom);
+      const isSelected = prev.includes(symptomName);
       if (isSelected) {
         // Remove symptom and its details
         const newDetails = { ...symptomDetails };
-        delete newDetails[symptom];
+        delete newDetails[symptomName];
         setSymptomDetails(newDetails);
-        return prev.filter(s => s !== symptom);
+        return prev.filter(s => s !== symptomName);
       } else {
         // Add symptom with default details
         setSymptomDetails(prev => ({
           ...prev,
-          [symptom]: { severity: 'Mild', duration: '1-2 days' }
+          [symptomName]: { severity: 'Mild', duration: '1-2 days' }
         }));
-        return [...prev, symptom];
+        return [...prev, symptomName];
       }
     });
   };
@@ -244,15 +300,64 @@ const SymptomChecker = () => {
         emergencyMode: emergencyMode
       });
 
+      // Save symptom report to Supabase
+      let symptomReportId = null;
+      if (user) {
+        try {
+          console.log('💾 Saving symptom report to Supabase...');
+          const symptomReport = await saveSymptomReport(
+            user.id,
+            inputMode === 'text' ? [currentSymptoms] : selectedSymptoms,
+            symptomDetails,
+            userProfile,
+            {}
+          );
+          symptomReportId = symptomReport.id;
+          console.log('✅ Symptom report saved:', symptomReport);
+
+          // Save diagnosis log to Supabase
+          console.log('💾 Saving diagnosis log to Supabase...');
+          const diagnosisLog = await saveDiagnosisLog(
+            user.id,
+            symptomReportId,
+            analysisResult
+          );
+          console.log('✅ Diagnosis log saved:', diagnosisLog);
+        } catch (supabaseError) {
+          console.error('❌ Failed to save to Supabase:', supabaseError);
+          
+          // Handle specific Supabase errors
+          if (supabaseError.message?.includes('JWT') || supabaseError.message?.includes('refresh')) {
+            console.warn('Session expired - user needs to re-login');
+            // Could optionally show a toast notification here
+          }
+          
+          // Don't block the UI for Supabase errors, but log them
+          // User must be authenticated to save analysis results
+        }
+      } else {
+        console.warn('⚠️ User not logged in - symptoms not saved to Supabase');
+      }
+
       // Generate AI insights
       generateAIInsights(analysisResult);
       
-      // Save to history
+      // Save to history (local backup)
       saveToHistory(analysisResult);
 
-      setAnalysis(analysisResult);
+      // Add Supabase reference to analysis
+      const analysisWithSupabase = {
+        ...analysisResult,
+        symptomReportId: symptomReportId,
+        savedToSupabase: !!symptomReportId
+      };
+
+      setAnalysis(analysisWithSupabase);
       setFollowUpQuestions(analysisResult.followUpQuestions || []);
       setAnalysisStep('followup');
+      
+      // Clear any previous errors on successful analysis
+      setError('');
       
       // Scroll to results
       setTimeout(() => {
@@ -261,7 +366,17 @@ const SymptomChecker = () => {
       
     } catch (error) {
       console.error('Analysis error:', error);
-      setError('Unable to analyze symptoms. Please try again later.');
+      
+      // Check if it's an API key related error
+      if (error.message && (error.message.includes('Groq API key') || error.message.includes('API key'))) {
+        setError(error.message);
+      } else if (error.message && error.message.includes('quota exceeded')) {
+        setError('Groq API rate limit exceeded. Please check your usage limits or try again later.');
+      } else if (error.message && error.message.includes('Invalid API Key')) {
+        setError('Invalid Groq API key. Please check your API key configuration.');
+      } else {
+        setError('Unable to analyze symptoms. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -299,6 +414,8 @@ const SymptomChecker = () => {
         enrichedSymptoms += `. Additional details: ${detailsText}`;
       }
 
+      console.log('🔄 Starting Groq AI refinement with follow-up answers...');
+      
       const refinedAnalysis = await refineAnalysis({
         symptoms: enrichedSymptoms,
         userProfile: userProfile,
@@ -306,11 +423,51 @@ const SymptomChecker = () => {
         previousAnalysis: analysis
       });
 
-      setAnalysis(refinedAnalysis);
+      console.log('✅ Groq AI refinement completed:', refinedAnalysis);
+      
+      // Mark the analysis as refined and add refinement metadata
+      const enhancedRefinedAnalysis = {
+        ...refinedAnalysis,
+        isRefined: true,
+        refinementLevel: 'Advanced',
+        refinedAt: new Date().toISOString(),
+        previousConfidence: analysis.confidence,
+        confidenceImprovement: (refinedAnalysis.confidence || 0.7) - (analysis.confidence || 0.7),
+        followUpProcessed: Object.keys(followUpAnswersFormatted).length,
+        refinementSource: 'Groq AI - Enhanced Analysis'
+      };
+      
+      setAnalysis(enhancedRefinedAnalysis);
       setAnalysisStep('complete');
+      
+      // Update Supabase with refined analysis
+      if (user && analysis.symptomReportId) {
+        try {
+          console.log('💾 Updating Supabase with refined analysis...');
+          await saveDiagnosisLog(
+            user.id,
+            analysis.symptomReportId,
+            enhancedRefinedAnalysis
+          );
+          console.log('✅ Refined analysis saved to Supabase');
+        } catch (supabaseError) {
+          console.error('❌ Failed to update Supabase with refined analysis:', supabaseError);
+        }
+      }
+      
+      // Clear any previous errors on successful refinement
+      setError('');
     } catch (error) {
       console.error('Follow-up analysis error:', error);
-      setError('Failed to process follow-up questions');
+      
+      // Check if it's an API key related error
+      if (error.message && (error.message.includes('Groq API key') || error.message.includes('API key'))) {
+        setError(error.message);
+      } else if (error.message && error.message.includes('quota exceeded')) {
+        setError('Groq API rate limit exceeded. Please check your usage limits or try again later.');
+      } else {
+        setError('Failed to process follow-up questions. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -335,7 +492,7 @@ const SymptomChecker = () => {
     });
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!analysis) {
       alert('No analysis available to export');
       return;
@@ -343,6 +500,15 @@ const SymptomChecker = () => {
 
     try {
       const doc = new jsPDF();
+      
+      // Function to clean text for PDF export
+      const cleanTextForPDF = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        return text
+          .replace(/[^\w\s.,!?()-]/g, '') // Remove special characters and emojis
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+      };
       
       // Add header
       doc.setFontSize(18);
@@ -365,15 +531,16 @@ const SymptomChecker = () => {
         
         doc.setFontSize(11);
         if (userProfile.age) {
-          doc.text(`Age: ${userProfile.age}`, 25, yPosition);
+          doc.text(`Age: ${cleanTextForPDF(userProfile.age.toString())}`, 25, yPosition);
           yPosition += 7;
         }
         if (userProfile.gender) {
-          doc.text(`Gender: ${userProfile.gender}`, 25, yPosition);
+          doc.text(`Gender: ${cleanTextForPDF(userProfile.gender)}`, 25, yPosition);
           yPosition += 7;
         }
         if (userProfile.preConditions && userProfile.preConditions.length > 0) {
-          doc.text(`Medical History: ${userProfile.preConditions.join(', ')}`, 25, yPosition);
+          const conditions = userProfile.preConditions.map(c => cleanTextForPDF(c)).join(', ');
+          doc.text(`Medical History: ${conditions}`, 25, yPosition);
           yPosition += 7;
         }
         yPosition += 5;
@@ -386,7 +553,7 @@ const SymptomChecker = () => {
       yPosition += 10;
       
       doc.setFontSize(11);
-      const symptomsText = inputMode === 'text' ? symptoms : selectedSymptoms.join(', ');
+      const symptomsText = inputMode === 'text' ? cleanTextForPDF(symptoms) : selectedSymptoms.map(s => cleanTextForPDF(s)).join(', ');
       const splitSymptoms = doc.splitTextToSize(symptomsText, 170);
       doc.text(splitSymptoms, 25, yPosition);
       yPosition += splitSymptoms.length * 7 + 10;
@@ -397,11 +564,11 @@ const SymptomChecker = () => {
       yPosition += 10;
       
       doc.setFontSize(11);
-      doc.text(`Overall Risk: ${analysis.riskAssessment.overall}`, 25, yPosition);
+      doc.text(`Overall Risk: ${cleanTextForPDF(analysis.riskAssessment.overall)}`, 25, yPosition);
       yPosition += 7;
-      doc.text(`Urgency: ${analysis.riskAssessment.urgency}`, 25, yPosition);
+      doc.text(`Urgency: ${cleanTextForPDF(analysis.riskAssessment.urgency)}`, 25, yPosition);
       yPosition += 7;
-      doc.text(`Timeframe: ${analysis.riskAssessment.timeframe}`, 25, yPosition);
+      doc.text(`Timeframe: ${cleanTextForPDF(analysis.riskAssessment.timeframe)}`, 25, yPosition);
       yPosition += 12;
       
       // Possible Conditions
@@ -409,20 +576,17 @@ const SymptomChecker = () => {
       doc.text('Possible Conditions:', 20, yPosition);
       yPosition += 10;
       
-      doc.autoTable({
-        startY: yPosition,
-        head: [['Condition', 'Likelihood', 'Severity']],
-        body: (analysis.conditions || []).map(condition => [
-          condition.name,
-          `${condition.likelihood}%`,
-          condition.severity
-        ]),
-        margin: { left: 20, right: 20 },
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [41, 128, 185] }
-      });
-      
-      yPosition = doc.lastAutoTable.finalY + 15;
+      // Simple table without autoTable
+      doc.setFontSize(11);
+      if (analysis.conditions && analysis.conditions.length > 0) {
+        analysis.conditions.forEach((condition, index) => {
+          doc.text(`${index + 1}. ${cleanTextForPDF(condition.name)}`, 25, yPosition);
+          doc.text(`Likelihood: ${condition.likelihood}%`, 120, yPosition);
+          doc.text(`Severity: ${cleanTextForPDF(condition.severity)}`, 160, yPosition);
+          yPosition += 7;
+        });
+      }
+      yPosition += 10;
       
       // Check if we need a new page
       if (yPosition > 250) {
@@ -437,7 +601,7 @@ const SymptomChecker = () => {
       
       doc.setFontSize(11);
       (analysis.recommendations || []).forEach((rec, index) => {
-        const recText = `${index + 1}. ${rec}`;
+        const recText = `${index + 1}. ${cleanTextForPDF(rec)}`;
         const splitRec = doc.splitTextToSize(recText, 170);
         doc.text(splitRec, 25, yPosition);
         yPosition += splitRec.length * 7 + 3;
@@ -448,13 +612,15 @@ const SymptomChecker = () => {
       if (analysis.redFlags && analysis.redFlags.length > 0) {
         doc.setFontSize(14);
         doc.setTextColor(220, 53, 69);
-        doc.text('⚠️ Red Flags - Seek Immediate Care:', 20, yPosition);
+        doc.text('WARNING: Red Flags - Seek Immediate Care:', 20, yPosition);
         yPosition += 10;
         
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         (analysis.redFlags || []).forEach((flag, index) => {
-          const flagText = `• ${flag}`;
+          // Clean the text to remove problematic characters
+          const cleanFlag = flag.replace(/[^\w\s.,!?-]/g, '').trim();
+          const flagText = `- ${cleanFlag}`;
           const splitFlag = doc.splitTextToSize(flagText, 170);
           doc.text(splitFlag, 25, yPosition);
           yPosition += splitFlag.length * 7 + 3;
@@ -476,16 +642,20 @@ const SymptomChecker = () => {
       
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      const disclaimerText = doc.splitTextToSize(analysis.disclaimer, 170);
+      const cleanDisclaimer = cleanTextForPDF(analysis.disclaimer);
+      const disclaimerText = doc.splitTextToSize(cleanDisclaimer, 170);
       doc.text(disclaimerText, 20, yPosition);
       
       // Save the PDF
       const fileName = `symptom_analysis_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
       
+      // Show success message
+      alert('PDF exported successfully!');
+      
     } catch (error) {
       console.error('PDF export error:', error);
-      alert('Failed to export PDF. Please try again.');
+      alert('Failed to export PDF. Please try again. Error: ' + error.message);
     }
   };
 
@@ -510,10 +680,10 @@ const SymptomChecker = () => {
         speechRecognition.current.stop();
       }
     };
-  }, []);
+  }, [user]); // Re-run when user changes
 
   const initializeAdvancedFeatures = () => {
-    // Load user preferences
+    // Load local UI preferences (these remain in localStorage for device-specific settings)
     const savedDarkMode = localStorage.getItem('healthApp_darkMode');
     if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode));
     
@@ -629,12 +799,31 @@ const SymptomChecker = () => {
     alert('Analysis bookmarked successfully!');
   };
 
-  const loadAnalysisHistory = () => {
-    const history = localStorage.getItem('healthApp_analysisHistory');
-    if (history) {
-      setAnalysisHistory(JSON.parse(history));
+  const loadAnalysisHistory = async () => {
+    if (user) {
+      try {
+        console.log('📚 Loading analysis history from Supabase...');
+        const reports = await getSymptomReports(user.id);
+        setAnalysisHistory(reports.map(report => ({
+          id: report.id,
+          symptoms: Array.isArray(report.symptoms) ? report.symptoms.join(', ') : report.symptoms,
+          analysis: report.diagnosis_logs?.[0] || {},
+          timestamp: report.created_at,
+          userProfile: report.user_profile || {}
+        })));
+        console.log('✅ Analysis history loaded from Supabase:', reports.length, 'items');
+      } catch (error) {
+        console.error('❌ Failed to load analysis history from Supabase:', error);
+        // Only Supabase data is supported - no localStorage fallback
+        setAnalysisHistory([]);
+      }
+    } else {
+      // User must be authenticated to access analysis history
+      console.warn('⚠️ User not authenticated - analysis history unavailable');
+      setAnalysisHistory([]);
     }
     
+    // Load bookmarks (localStorage for device-specific UI preferences)
     const bookmarks = localStorage.getItem('healthApp_bookmarks');
     if (bookmarks) {
       setBookmarkedAnalyses(JSON.parse(bookmarks));
@@ -642,17 +831,13 @@ const SymptomChecker = () => {
   };
 
   const saveToHistory = (analysisData) => {
-    const historyItem = {
-      id: Date.now(),
-      symptoms: inputMode === 'text' ? symptoms : selectedSymptoms.join(', '),
-      analysis: analysisData,
-      timestamp: new Date().toISOString(),
-      userProfile: userProfile
-    };
-    
-    const newHistory = [historyItem, ...analysisHistory.slice(0, 9)]; // Keep last 10
-    setAnalysisHistory(newHistory);
-    localStorage.setItem('healthApp_analysisHistory', JSON.stringify(newHistory));
+    // Analysis history is now handled entirely by Supabase in handleSubmit
+    // This function is kept for backwards compatibility but data is cloud-only
+    if (!user) {
+      console.warn('⚠️ User not authenticated - analysis history not saved');
+      return;
+    }
+    // History is already saved to Supabase in handleSubmit function
   };
 
   const generateAIInsights = (analysisData) => {
@@ -723,8 +908,20 @@ const SymptomChecker = () => {
     };
   };
 
+  // --- Main Render ---
+  if (error) {
+    console.log('SymptomChecker error:', error);
+  }
+
   return (
     <div className={`advanced-symptom-checker ${darkMode ? 'dark-mode' : ''} ${printMode ? 'print-mode' : ''}`}>
+      {/* Error Banner - Always visible if error exists */}
+      {error && (
+        <div className="error-banner" style={{ background: '#ffeaea', color: '#b00020', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', border: '1px solid #b00020', textAlign: 'center' }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+      
       {/* Advanced Header with Controls */}
       <div className="advanced-header">
         <div className="symptom-checker-header">
@@ -740,7 +937,7 @@ const SymptomChecker = () => {
           </div>
         </div>
         
-        {/* Advanced Controls Toolbar */}
+        {/* Advanced Controls Toolbar - Now Working */}
         <div className="advanced-controls">
           <div className="control-group">
             <button
@@ -791,60 +988,26 @@ const SymptomChecker = () => {
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </button>
+            
+            {analysis && (
+              <button
+                type="button"
+                className="control-btn"
+                onClick={exportToPDF}
+                title="Export PDF"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2"/>
+                  <polyline points="10,9 9,9 8,9" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+              </button>
+            )}
           </div>
           
-          {/* Action Buttons */}
-          {analysis && (
-            <div className="action-buttons">
-              <button
-                type="button"
-                className="action-btn"
-                onClick={generateShareableLink}
-                title={t('share')}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="currentColor" strokeWidth="2"/>
-                  <polyline points="16,6 12,2 8,6" stroke="currentColor" strokeWidth="2"/>
-                  <line x1="12" y1="2" x2="12" y2="15" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </button>
-              
-              <button
-                type="button"
-                className="action-btn"
-                onClick={bookmarkAnalysis}
-                title={t('bookmark')}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </button>
-              
-              <button
-                type="button"
-                className="action-btn"
-                onClick={() => setShowInsights(!showInsights)}
-                title="AI Insights"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </button>
-              
-              <button
-                type="button"
-                className="action-btn"
-                onClick={() => setPrintMode(!printMode)}
-                title="Print Mode"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <polyline points="6,9 6,2 18,2 18,9" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" strokeWidth="2"/>
-                  <rect x="6" y="14" width="12" height="8" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
 
@@ -980,14 +1143,18 @@ const SymptomChecker = () => {
 
       <form onSubmit={handleSubmit} className="symptom-form">
         {error && (
-          <div className="error-message">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-              <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
-              <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-            {error}
-          </div>
+          error.includes('Groq API key') || error.includes('API key') ? (
+            <APIKeyError error={error} />
+          ) : (
+            <div className="error-message">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
+                <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+              {error}
+            </div>
+          )
         )}
 
         {inputMode === 'text' ? (
@@ -1011,18 +1178,33 @@ const SymptomChecker = () => {
         ) : (
           <div className="symptom-selector-section">
             <h4>Select Your Symptoms</h4>
-            <div className="symptom-grid">
-              {commonSymptoms.map(symptom => (
-                <button
-                  key={symptom}
-                  type="button"
-                  className={`symptom-tag ${selectedSymptoms.includes(symptom) ? 'selected' : ''}`}
-                  onClick={() => toggleSymptom(symptom)}
-                >
-                  {symptom}
-                </button>
-              ))}
-            </div>
+            
+            {/* Display symptoms by category with icons */}
+            {Object.entries(symptomCategories).map(([category, symptoms]) => (
+              <div key={category} className="symptom-category">
+                <h5 className="category-title">{category}</h5>
+                <div className="symptom-grid">
+                  {symptoms.map(symptomObj => {
+                    // Ensure we always have an icon and name
+                    const icon = (symptomObj.icon && symptomObj.icon.trim()) ? symptomObj.icon : '❔';
+                    const name = (symptomObj.name && symptomObj.name.trim()) ? symptomObj.name : 'Unknown symptom';
+                    const isSelected = selectedSymptoms.includes(name);
+                    
+                    return (
+                      <button
+                        key={`${category}-${name}`}
+                        type="button"
+                        className={`symptom-tag ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleSymptom(name)}
+                      >
+                        <span className="symptom-icon">{icon}</span>
+                        <span className="symptom-name">{name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
             
             <div className="custom-symptom">
               <input
@@ -1129,6 +1311,14 @@ const SymptomChecker = () => {
                 </svg>
                 {Math.round((analysis.confidence || 0.7) * 100)}% Confidence
               </div>
+              {analysis.savedToSupabase && user && (
+                <div className="supabase-saved-badge">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  Saved to Database
+                </div>
+              )}
               <button onClick={exportToPDF} className="export-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/>
@@ -1341,7 +1531,16 @@ const SymptomChecker = () => {
                   <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
                   <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24" stroke="currentColor" strokeWidth="2"/>
                 </svg>
-                Analysis powered by Google AI (Gemini)
+                🤖 Analysis powered by Groq AI (Llama 3)
+                {analysis.isRefined && (
+                  <span className="refined-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    Enhanced
+                  </span>
+                )}
               </div>
             )}
             {analysis.fallbackReason && (

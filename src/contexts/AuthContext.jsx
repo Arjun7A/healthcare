@@ -10,16 +10,42 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check for an active session when the app first loads
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Session error:', error.message);
+          // Clear any invalid session data
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.warn('Failed to get session:', error.message);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     getSession();
 
     // Listen for real-time changes in authentication state (e.g., login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        console.log('User signed out');
+        setUser(null);
+      } else if (event === 'SIGNED_IN') {
+        console.log('User signed in');
+        setUser(session?.user ?? null);
+      } else {
+        setUser(session?.user ?? null);
+      }
     });
 
     // Cleanup the listener when the component is no longer on screen

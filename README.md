@@ -1,11 +1,11 @@
 # Healthcare App - AI-Powered Medical Triage System
 
-A comprehensive healthcare application built with React, Supabase, and Google AI Studio (Gemini) for advanced symptom analysis and medical triage.
+A comprehensive healthcare application built with React, Supabase, and Groq (Llama 3) for advanced symptom analysis and medical triage.
 
 ## 🏥 Features
 
 ### 🤖 AI-Powered Symptom Analysis
-- **Google AI Studio Integration**: Advanced medical analysis using Gemini Pro
+- **Groq Integration**: Advanced medical analysis using Llama 3
 - **Multi-Symptom Input**: Free-text and selector-based symptom entry
 - **Personalized Assessment**: User profiles with age, gender, and medical history
 - **Risk Stratification**: Professional triage with urgency levels
@@ -64,8 +64,50 @@ Create `.env.local` with:
 ```bash
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_AI_API_KEY=your_google_ai_studio_api_key
+VITE_GROQ_API_KEY=your_groq_api_key
 ```
+
+### 🔑 Groq API Setup
+
+**IMPORTANT**: The symptom checker requires a Groq API key to function. Without it, the AI features will not work.
+
+#### Quick Setup (2 minutes):
+
+1. **Get your free API key**:
+   - Visit: https://console.groq.com/keys
+   - Sign in with your Google account
+   - Click "Create API Key" (completely free!)
+
+2. **Copy the generated key**
+
+3. **Add to your environment**:
+   ```bash
+   VITE_GROQ_API_KEY=your_actual_api_key_here
+   ```
+
+4. **Restart the development server**:
+   ```bash
+   npm run dev
+   ```
+
+#### Features Powered by Groq:
+- 🤖 **Advanced AI Symptom Analysis** - Professional-grade medical assessment
+- 📊 **Personalized Recommendations** - Tailored to user profile and symptoms
+- 🎯 **Intelligent Follow-up Questions** - Dynamic refinement of diagnosis
+- 📈 **Risk Assessment** - Urgency levels and care recommendations
+- 💡 **Evidence-based Insights** - Medical literature-backed responses
+
+#### Error Handling:
+- ✅ **Missing API Key**: Clear setup instructions displayed
+- ✅ **Invalid API Key**: Verification guidance provided
+- ✅ **Quota Exceeded**: Usage limit notifications
+- ✅ **Network Issues**: Retry mechanisms and fallbacks
+
+#### API Key Security:
+- 🔒 Environment variables only (never hardcoded)
+- 🔒 Client-side usage (VITE_ prefix)
+- 🔒 No server-side exposure
+- 🔒 Free tier with generous limits
 
 ### Development
 ```bash
@@ -79,7 +121,7 @@ npm run dev
 
 - **Frontend**: React 19, Vite
 - **Backend**: Supabase (Auth, Database)
-- **AI**: Google AI Studio (Gemini Pro)
+- **AI**: Groq (Llama 3)
 - **Styling**: Custom CSS with healthcare design system
 - **PDF**: jsPDF with auto-table
 - **Routing**: React Router DOM
@@ -116,7 +158,7 @@ npm run build
 - `@supabase/supabase-js` - Backend services
 
 ### AI & PDF
-- `@google/generative-ai` - Google AI Studio integration
+- `groq-sdk` - Groq integration
 - `jspdf` - PDF generation
 - `jspdf-autotable` - PDF tables
 
