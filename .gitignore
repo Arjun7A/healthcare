@@ -23,3 +23,18 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Test and temporary files
+test-*.js
+debug-*.js
+temp-*
+showcase.js
+integration-test.js
+testAnalysis.js
+
+# Documentation files (except README)
+*.md
+!README.md
+
+# Environment files
+.env.example
