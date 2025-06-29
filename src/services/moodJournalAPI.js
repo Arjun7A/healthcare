@@ -203,15 +203,15 @@ export class MoodJournalAPI {
 
       // Apply filters
       if (options.startDate) {
-        query = query.gte('timestamp', options.startDate);
+        query = query.gte('created_at', options.startDate);
       }
       if (options.endDate) {
-        query = query.lte('timestamp', options.endDate);
+        query = query.lte('created_at', options.endDate);
       }
 
       // Apply ordering
       if (options.orderBy === 'date') {
-        query = query.order('timestamp', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       } else if (options.orderBy === 'mood') {
         query = query.order('mood', { ascending: false });
       }
@@ -228,10 +228,25 @@ export class MoodJournalAPI {
 
       if (error) throw error;
 
-      return { success: true, data: data || [] };
+      // Transform Supabase data to match frontend format
+      const transformedData = (data || []).map(entry => ({
+        id: entry.id,
+        mood: entry.mood,
+        emotions: entry.emotions || [],
+        activities: entry.activities || [],
+        notes: entry.notes || '',
+        date: entry.date ? new Date(entry.date).toDateString() : new Date(entry.created_at).toDateString(),
+        timestamp: entry.created_at,
+        sleep_hours: entry.sleep_hours,
+        energy_level: entry.energy_level,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at
+      }));
+
+      return transformedData;
     } catch (error) {
       console.error('❌ Supabase fetch failed:', error);
-      return { success: false, error: error.message, data: [] };
+      return [];
     }
   }
 

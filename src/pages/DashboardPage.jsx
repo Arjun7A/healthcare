@@ -1,15 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/useAuth';
 import Button from '../components/common/Button';
 import SymptomChecker from '../components/features/health/SymptomChecker';
 import MoodJournal from '../components/features/mood/MoodJournal';
 import MoodInsights from '../components/features/mood/MoodInsights';
 import MoodAnalytics from '../components/features/mood/MoodAnalytics';
+import { moodJournalAPI } from '../services/moodJournalAPI';
 import '../styles/pages/DashboardPage.css';
 
 const DashboardPage = () => {
   const { user, signOut } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
+  const [moodEntries, setMoodEntries] = useState([]);
+  const [loadingEntries, setLoadingEntries] = useState(false);
+  const [entriesError, setEntriesError] = useState(null);
+
+  // Fetch mood entries when component mounts or when user changes
+  useEffect(() => {
+    const fetchMoodEntries = async () => {
+      if (!user) return;
+      
+      try {
+        setLoadingEntries(true);
+        setEntriesError(null);
+        console.log('📊 Dashboard: Fetching mood entries for analytics...');
+        
+        const entries = await moodJournalAPI.getMoodEntries({
+          limit: 1000, // Get enough entries for analytics
+          orderBy: 'date'
+        });
+        
+        console.log('📊 Dashboard: Fetched', entries?.length || 0, 'mood entries');
+        setMoodEntries(entries || []);
+      } catch (error) {
+        console.error('❌ Dashboard: Failed to fetch mood entries:', error);
+        let userFriendlyError = 'Failed to load mood data.';
+        
+        // Provide helpful error messages based on error type
+        if (error.message.includes('column') && error.message.includes('does not exist')) {
+          userFriendlyError = 'Database tables not found. Please run the database setup script in Supabase.';
+        } else if (error.message.includes('relation') && error.message.includes('does not exist')) {
+          userFriendlyError = 'Database not properly configured. Please check your Supabase setup.';
+        } else if (error.message.includes('authentication')) {
+          userFriendlyError = 'Authentication error. Please sign out and sign in again.';
+        }
+        
+        setEntriesError(userFriendlyError);
+        setMoodEntries([]);
+      } finally {
+        setLoadingEntries(false);
+      }
+    };
+
+    fetchMoodEntries();
+  }, [user]);
+
+  // Refresh entries when switching to mood analytics
+  const handleSectionChange = async (section) => {
+    setActiveSection(section);
+    
+    // Refresh mood entries when accessing analytics
+    if (section === 'mood-analytics' && user) {
+      try {
+        console.log('📊 Dashboard: Refreshing mood entries for analytics...');
+        const entries = await moodJournalAPI.getMoodEntries({
+          limit: 1000,
+          orderBy: 'date'
+        });
+        setMoodEntries(entries || []);
+      } catch (error) {
+        console.error('❌ Dashboard: Failed to refresh mood entries:', error);
+      }
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -64,7 +127,7 @@ const DashboardPage = () => {
               <div className="features-grid">
                 <div 
                   className="feature-card primary"
-                  onClick={() => setActiveSection('symptom-checker')}
+                  onClick={() => handleSectionChange('symptom-checker')}
                 >
                   <div className="feature-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
@@ -85,7 +148,7 @@ const DashboardPage = () => {
 
                 <div 
                   className="feature-card secondary"
-                  onClick={() => setActiveSection('mood-journal')}
+                  onClick={() => handleSectionChange('mood-journal')}
                 >
                   <div className="feature-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
@@ -105,7 +168,7 @@ const DashboardPage = () => {
 
                 <div 
                   className="feature-card tertiary"
-                  onClick={() => setActiveSection('mood-analytics')}
+                  onClick={() => handleSectionChange('mood-analytics')}
                 >
                   <div className="feature-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
@@ -146,7 +209,7 @@ const DashboardPage = () => {
             <div className="section-content">
               <div className="section-header">
                 <Button 
-                  onClick={() => setActiveSection('overview')} 
+                  onClick={() => handleSectionChange('overview')} 
                   variant="outline"
                   className="back-btn"
                 >
@@ -164,7 +227,7 @@ const DashboardPage = () => {
             <div className="section-content">
               <div className="section-header">
                 <Button 
-                  onClick={() => setActiveSection('overview')} 
+                  onClick={() => handleSectionChange('overview')} 
                   variant="outline"
                   className="back-btn"
                 >
@@ -182,16 +245,26 @@ const DashboardPage = () => {
             <div className="section-content">
               <div className="section-header">
                 <Button 
-                  onClick={() => setActiveSection('overview')} 
+                  onClick={() => handleSectionChange('overview')} 
                   variant="outline"
                   className="back-btn"
                 >
                   ← Back to Dashboard
                 </Button>
                 <h2>📊 Mood Analytics</h2>
+                {loadingEntries && (
+                  <div className="loading-indicator">
+                    <span>Loading mood data...</span>
+                  </div>
+                )}
+                {entriesError && (
+                  <div className="error-indicator">
+                    <span>Error loading mood data: {entriesError}</span>
+                  </div>
+                )}
               </div>
               <div className="mood-analytics-container">
-                <MoodAnalytics />
+                <MoodAnalytics entries={moodEntries} />
               </div>
             </div>
           )}

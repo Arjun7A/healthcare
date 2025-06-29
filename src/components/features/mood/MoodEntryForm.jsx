@@ -6,6 +6,9 @@ const MoodEntryForm = ({ onSubmit, initialData = null }) => {
   const [emotions, setEmotions] = useState(initialData?.emotions || []);
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [activities, setActivities] = useState(initialData?.activities || []);
+  const [tags, setTags] = useState(initialData?.tags || []);
+  const [sleepHours, setSleepHours] = useState(initialData?.sleep_hours || 8);
+  const [energyLevel, setEnergyLevel] = useState(initialData?.energy_level || 5);
   const [loading, setLoading] = useState(false);
 
   const moodOptions = [
@@ -26,6 +29,10 @@ const MoodEntryForm = ({ onSubmit, initialData = null }) => {
     'Family Time', 'Meditation', 'Reading', 'Outdoor', 'Creative', 'Self-care'
   ];
 
+  const tagOptions = [
+    'Work', 'Family', 'Friends', 'Exercise', 'Diet', 'Sleep', 'Stress', 'Relaxation', 'Travel', 'Learning', 'Health', 'Finance', 'Fun', 'Other'
+  ];
+
   const handleEmotionToggle = (emotion) => {
     setEmotions(prev => 
       prev.includes(emotion) 
@@ -42,6 +49,14 @@ const MoodEntryForm = ({ onSubmit, initialData = null }) => {
     );
   };
 
+  const handleTagToggle = (tag) => {
+    setTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -51,6 +66,9 @@ const MoodEntryForm = ({ onSubmit, initialData = null }) => {
       emotions,
       notes: notes.trim(),
       activities,
+      tags,
+      sleep_hours: sleepHours,
+      energy_level: energyLevel,
       timestamp: new Date().toISOString(),
       date: new Date().toDateString()
     };
@@ -63,6 +81,9 @@ const MoodEntryForm = ({ onSubmit, initialData = null }) => {
         setEmotions([]);
         setNotes('');
         setActivities([]);
+        setTags([]);
+        setSleepHours(8);
+        setEnergyLevel(5);
       }
     } catch (error) {
       console.error('Error saving mood entry:', error);
@@ -148,6 +169,55 @@ const MoodEntryForm = ({ onSubmit, initialData = null }) => {
                 {activity}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Tags (Triggers) */}
+        <div className="form-group">
+          <label className="form-label">Tags / Triggers <span className="optional">(optional)</span></label>
+          <div className="tags-grid">
+            {tagOptions.map(tag => (
+              <button
+                key={tag}
+                type="button"
+                className={`tag-btn${tags.includes(tag) ? ' selected' : ''}`}
+                onClick={() => handleTagToggle(tag)}
+              >
+                <span className="tag-icon">🏷️</span> {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sleep Hours */}
+        <div className="form-group">
+          <label className="form-label">Sleep Hours <span className="optional">(last night)</span></label>
+          <input
+            type="number"
+            min="0"
+            max="24"
+            step="0.5"
+            value={sleepHours}
+            onChange={e => setSleepHours(Number(e.target.value))}
+            className="sleep-input"
+            style={{ maxWidth: 120 }}
+          />
+        </div>
+
+        {/* Energy Level */}
+        <div className="form-group">
+          <label className="form-label">Energy Level</label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={energyLevel}
+            onChange={e => setEnergyLevel(Number(e.target.value))}
+            className="energy-slider"
+          />
+          <div className="energy-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280' }}>
+            <span>Low</span>
+            <span>High</span>
           </div>
         </div>
 

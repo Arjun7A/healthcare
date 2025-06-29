@@ -44,6 +44,9 @@ const MoodJournal = () => {
         emotions: entry.emotions || [],
         activities: entry.activities || [],
         notes: entry.notes || '',
+        tags: entry.tags || [],
+        sleep_hours: entry.sleep_hours ?? null,
+        energy_level: entry.energy_level ?? null,
         date: new Date(entry.date).toDateString(),
         timestamp: entry.created_at
       }));
@@ -75,7 +78,10 @@ const MoodJournal = () => {
         mood: moodEntry.mood,
         emotions: moodEntry.emotions,
         activities: moodEntry.activities,
-        notes: moodEntry.notes
+        notes: moodEntry.notes,
+        tags: moodEntry.tags,
+        sleep_hours: moodEntry.sleep_hours,
+        energy_level: moodEntry.energy_level
       };
 
       // Check if updating existing entry for today
@@ -225,6 +231,22 @@ const MoodJournal = () => {
                     </div>
                   )}
                   
+                  {todaysEntry.tags && todaysEntry.tags.length > 0 && (
+                    <div className="tags-summary">
+                      <strong>Tags:</strong> {todaysEntry.tags.join(', ')}
+                    </div>
+                  )}
+                  {typeof todaysEntry.sleep_hours === 'number' && (
+                    <div className="sleep-summary">
+                      <strong>Sleep:</strong> {todaysEntry.sleep_hours} hours
+                    </div>
+                  )}
+                  {typeof todaysEntry.energy_level === 'number' && (
+                    <div className="energy-summary">
+                      <strong>Energy Level:</strong> <span style={{ color: '#fbbf24', fontWeight: 600 }}>{todaysEntry.energy_level}/10</span>
+                    </div>
+                  )}
+                  
                   <div className="entry-timestamp">
                     <small>Recorded at {new Date(todaysEntry.timestamp).toLocaleTimeString()}</small>
                   </div>
@@ -312,6 +334,22 @@ const MoodJournal = () => {
                           <div className="entry-notes">
                             <strong>Notes:</strong>
                             <div className="notes-text">{entry.notes}</div>
+                          </div>
+                        )}
+                        
+                        {entry.tags && entry.tags.length > 0 && (
+                          <div className="entry-tags">
+                            <strong>Tags:</strong> {entry.tags.join(', ')}
+                          </div>
+                        )}
+                        {typeof entry.sleep_hours === 'number' && (
+                          <div className="entry-sleep">
+                            <strong>Sleep:</strong> {entry.sleep_hours} hours
+                          </div>
+                        )}
+                        {typeof entry.energy_level === 'number' && (
+                          <div className="entry-energy">
+                            <strong>Energy Level:</strong> <span style={{ color: '#fbbf24', fontWeight: 600 }}>{entry.energy_level}/10</span>
                           </div>
                         )}
                         

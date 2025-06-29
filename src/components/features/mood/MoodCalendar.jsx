@@ -3,6 +3,20 @@ import React, { useState, useMemo } from 'react';
 const MoodCalendar = ({ entries, onDateSelect }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   
+  // Calculate monthEntries and summary stats at the top
+  const monthEntries = entries.filter(entry => {
+    const entryDate = new Date(entry.timestamp);
+    return entryDate.getFullYear() === currentDate.getFullYear() &&
+           entryDate.getMonth() === currentDate.getMonth();
+  });
+
+  let averageMood = 0, bestDay = null, worstDay = null;
+  if (monthEntries.length > 0) {
+    averageMood = monthEntries.reduce((sum, entry) => sum + entry.mood, 0) / monthEntries.length;
+    bestDay = monthEntries.reduce((best, entry) => entry.mood > best.mood ? entry : best, monthEntries[0]);
+    worstDay = monthEntries.reduce((worst, entry) => entry.mood < worst.mood ? entry : worst, monthEntries[0]);
+  }
+
   const { monthData, monthName, year } = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -137,69 +151,68 @@ const MoodCalendar = ({ entries, onDateSelect }) => {
         ))}
       </div>
 
-      {/* Legend */}
-      <div className="calendar-legend">
-        <h4>Mood Scale</h4>
-        <div className="legend-items">
-          {[1, 2, 3, 4, 5].map(mood => (
-            <div key={mood} className="legend-item">
-              <div 
-                className="legend-color"
-                style={{ backgroundColor: getMoodColor(mood) }}
-              ></div>
-              <span className="legend-emoji">{getMoodEmoji(mood)}</span>
-              <span className="legend-label">{getMoodLabel(mood)}</span>
+      {/* Dashboard Cards Row: Mood Scale + Monthly Summary */}
+      <div className="mood-dashboard-cards">
+        <div className="mood-scale-card">
+          <div className="mood-scale-title">Mood Scale</div>
+          <div className="mood-scale-list">
+            <div className="mood-scale-row very-low" tabIndex="0">
+              <div className="mood-scale-accent"></div>
+              <span className="mood-scale-emoji" role="img" aria-label="Very Low">😞</span>
+              <span className="mood-scale-label">Very Low</span>
             </div>
-          ))}
+            <div className="mood-scale-row low" tabIndex="0">
+              <div className="mood-scale-accent"></div>
+              <span className="mood-scale-emoji" role="img" aria-label="Low">😕</span>
+              <span className="mood-scale-label">Low</span>
+            </div>
+            <div className="mood-scale-row okay" tabIndex="0">
+              <div className="mood-scale-accent"></div>
+              <span className="mood-scale-emoji" role="img" aria-label="Okay">😐</span>
+              <span className="mood-scale-label">Okay</span>
+            </div>
+            <div className="mood-scale-row good" tabIndex="0">
+              <div className="mood-scale-accent"></div>
+              <span className="mood-scale-emoji" role="img" aria-label="Good">🙂</span>
+              <span className="mood-scale-label">Good</span>
+            </div>
+            <div className="mood-scale-row very-good" tabIndex="0">
+              <div className="mood-scale-accent"></div>
+              <span className="mood-scale-emoji" role="img" aria-label="Very Good">😊</span>
+              <span className="mood-scale-label">Very Good</span>
+            </div>
+          </div>
         </div>
+        <div className="monthly-summary premium-summary-wrapper">
+          <div className="mood-summary-card" aria-label="Monthly Mood Summary">
+            <div className="mood-summary-title">This Month's Mood Summary</div>
+            {monthEntries.length === 0 ? (
+              <div className="mood-summary-stats">
+                <div className="mood-summary-stat-label">No mood entries this month yet.</div>
       </div>
-
-      {/* Monthly Summary */}
-      <div className="monthly-summary">
-        <h4>This Month's Summary</h4>
-        <div className="summary-stats">
-          {(() => {
-            const monthEntries = entries.filter(entry => {
-              const entryDate = new Date(entry.timestamp);
-              return entryDate.getFullYear() === currentDate.getFullYear() && 
-                     entryDate.getMonth() === currentDate.getMonth();
-            });
-            
-            if (monthEntries.length === 0) {
-              return <p>No mood entries this month yet.</p>;
-            }
-            
-            const averageMood = monthEntries.reduce((sum, entry) => sum + entry.mood, 0) / monthEntries.length;
-            const bestDay = monthEntries.reduce((best, entry) => entry.mood > best.mood ? entry : best);
-            const worstDay = monthEntries.reduce((worst, entry) => entry.mood < worst.mood ? entry : worst);
-            
-            return (
-              <div className="summary-grid">
-                <div className="summary-item">
-                  <span className="summary-label">Entries:</span>
-                  <span className="summary-value">{monthEntries.length} days</span>
+            ) : (
+              <div className="mood-summary-stats">
+                <div className="mood-summary-stat-label">Entries:</div>
+                <div className="mood-summary-stat-value">
+                  <span className="mood-summary-badge" tabIndex="0">{monthEntries.length} days</span>
                 </div>
-                <div className="summary-item">
-                  <span className="summary-label">Average Mood:</span>
-                  <span className="summary-value" style={{ color: getMoodColor(Math.round(averageMood)) }}>
-                    {Math.round(averageMood * 10) / 10}/5
-                  </span>
+                <div className="mood-summary-stat-label">Average Mood:</div>
+                <div className="mood-summary-stat-value">
+                  <span className="mood-summary-badge" tabIndex="0">{Math.round(averageMood * 10) / 10}/5</span>
                 </div>
-                <div className="summary-item">
-                  <span className="summary-label">Best Day:</span>
-                  <span className="summary-value">
-                    {getMoodEmoji(bestDay.mood)} {new Date(bestDay.timestamp).getDate()}
-                  </span>
+                <div className="mood-summary-stat-label">Best Day:</div>
+                <div className="mood-summary-stat-value">
+                  <span className="mood-summary-emoji" role="img" aria-label="Best Mood Emoji">{getMoodEmoji(bestDay.mood)}</span>
+                  <span className="mood-summary-badge" tabIndex="0">{new Date(bestDay.timestamp).getDate()}</span>
                 </div>
-                <div className="summary-item">
-                  <span className="summary-label">Challenging Day:</span>
-                  <span className="summary-value">
-                    {getMoodEmoji(worstDay.mood)} {new Date(worstDay.timestamp).getDate()}
-                  </span>
+                <div className="mood-summary-stat-label">Challenging Day:</div>
+                <div className="mood-summary-stat-value">
+                  <span className="mood-summary-emoji" role="img" aria-label="Challenging Mood Emoji">{getMoodEmoji(worstDay.mood)}</span>
+                  <span className="mood-summary-badge challenging" tabIndex="0">{new Date(worstDay.timestamp).getDate()}</span>
                 </div>
               </div>
-            );
-          })()}
+            )}
+          </div>
         </div>
       </div>
     </div>

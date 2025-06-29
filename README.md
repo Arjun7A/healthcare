@@ -67,7 +67,31 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_GROQ_API_KEY=your_groq_api_key
 ```
 
-### 🔑 Groq API Setup
+### �️ Database Setup
+
+**IMPORTANT**: The app requires database tables to function. Without them, mood tracking and analytics won't work.
+
+#### Quick Setup (5 minutes):
+
+1. **Go to your Supabase project**:
+   - Visit: https://supabase.com/dashboard
+   - Select your project
+   - Click "SQL Editor" in the sidebar
+
+2. **Run the database setup**:
+   - Copy the content from `database/setup.sql`
+   - Paste it into the SQL Editor
+   - Click "Run" to create all tables
+
+3. **Verify setup**:
+   - Go to "Table Editor" to see the created tables
+   - Tables: `mood_entries`, `mood_settings`, `symptom_reports`, `diagnosis_logs`
+
+4. **Optional - Add sample data**:
+   - See `database/README.md` for instructions
+   - Helps test mood analytics immediately
+
+### �🔑 Groq API Setup
 
 **IMPORTANT**: The symptom checker requires a Groq API key to function. Without it, the AI features will not work.
 

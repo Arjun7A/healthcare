@@ -354,7 +354,7 @@ ENHANCED OUTPUT REQUIREMENTS:
 
 Provide the refined analysis in the same JSON structure as the initial analysis, but with SIGNIFICANTLY enhanced detail and accuracy. This should be noticeably more advanced and tailored than the initial analysis.
 
-Respond ONLY with valid JSON in the exact same format as the initial analysis.`;
+Respond ONLY with valid JSON in the exact same format as the initial analysis, but with SIGNIFICANTLY enhanced detail and accuracy.`;
 
     
     const completion = await groq.chat.completions.create({
@@ -876,9 +876,210 @@ function isAppropriateRecommendation(recommendation) {
   return !hasInappropriate && isHealthRelated && recommendation.title.length > 5;
 }
 
+/**
+ * Generate advanced mood analytics and insights using Groq AI
+ * @param {Object} analyticsData - Comprehensive mood data for analysis
+ * @returns {Promise<Object>} Advanced insights including patterns, predictions, and recommendations
+ */
+export const generateAdvancedMoodInsights = async (analyticsData) => {
+  try {
+    if (!groq) {
+      throw new Error('Groq API key not configured. Please add VITE_GROQ_API_KEY to your .env file.\n\nGet your free API key from: https://console.groq.com/');
+    }
+
+    if (API_KEY === 'your_groq_api_key_here' || API_KEY === 'your_api_key_here') {
+      throw new Error('Please replace the placeholder API key with your actual Groq API key.\n\nGet your free API key from: https://console.groq.com/');
+    }
+
+    if (!groq) {
+      throw new Error('Groq client not initialized properly. Please check your API key configuration.');
+    }
+
+    // Ensure analyticsData is an object and provide defaults
+    const data = analyticsData || {};
+    
+    const {
+      entries = [],
+      avgMood = 0,
+      totalEntries = 0,
+      moodDistribution = {},
+      topTags = [],
+      topEmotions = [],
+      weekdayAvgs = [0, 0, 0, 0, 0, 0, 0],
+      hourlyAvgs = Array(24).fill(0),
+      sleepData = [],
+      energyData = [],
+      timeframe = 'period'
+    } = data;
+
+    // Ensure arrays and objects are properly initialized
+    const safeMoodDistribution = moodDistribution || {};
+    const safeTopTags = Array.isArray(topTags) ? topTags : [];
+    const safeTopEmotions = Array.isArray(topEmotions) ? topEmotions : [];
+    const safeWeekdayAvgs = Array.isArray(weekdayAvgs) ? weekdayAvgs : [0, 0, 0, 0, 0, 0, 0];
+    const safeHourlyAvgs = Array.isArray(hourlyAvgs) ? hourlyAvgs : Array(24).fill(0);
+    const safeEntries = Array.isArray(entries) ? entries : [];
+
+    const prompt = `As a mental health analytics expert, analyze this comprehensive mood data and provide advanced insights:
+
+MOOD DATA SUMMARY:
+- Average Mood: ${avgMood}/5 over ${totalEntries} entries (${timeframe})
+- Mood Distribution: ${Object.entries(safeMoodDistribution).map(([mood, count]) => `${mood}/5: ${count} times`).join(', ') || 'No mood data available'}
+- Top Activities: ${safeTopTags.map(([tag, count]) => `${tag} (${count}x)`).join(', ') || 'No activity data'}
+- Top Emotions: ${safeTopEmotions.map(([emotion, count]) => `${emotion} (${count}x)`).join(', ') || 'No emotion data'}
+- Best Day: ${safeWeekdayAvgs.length > 0 ? safeWeekdayAvgs.indexOf(Math.max(...safeWeekdayAvgs)) : 'N/A'} (${safeWeekdayAvgs.length > 0 ? Math.max(...safeWeekdayAvgs).toFixed(1) : 'N/A'}/5)
+- Worst Day: ${safeWeekdayAvgs.length > 0 ? safeWeekdayAvgs.indexOf(Math.min(...safeWeekdayAvgs.filter(avg => avg > 0))) : 'N/A'} (${safeWeekdayAvgs.length > 0 ? Math.min(...safeWeekdayAvgs.filter(avg => avg > 0)).toFixed(1) : 'N/A'}/5)
+- Best Hour: ${safeHourlyAvgs.length > 0 ? safeHourlyAvgs.indexOf(Math.max(...safeHourlyAvgs)) : 'N/A'}:00 (${safeHourlyAvgs.length > 0 ? Math.max(...safeHourlyAvgs).toFixed(1) : 'N/A'}/5)
+
+RECENT ENTRIES (last 10):
+${safeEntries.slice(-10).map(entry => `- ${new Date(entry.timestamp || entry.date || Date.now()).toLocaleDateString()}: Mood ${entry.mood || 'N/A'}/5, Activities: [${(entry.activities || []).join(', ') || 'none'}], Emotions: [${(entry.emotions || []).join(', ') || 'none'}], Notes: "${entry.notes || 'none'}"`).join('\n') || 'No recent entries available'}
+
+Provide a JSON response with these specific insights:
+
+{
+  "weeklyMoodSummary": "Natural language summary of mood trends this period",
+  "triggerPatternDetection": "Identified patterns in mood triggers and timing",
+  "behavioralSuggestion": "Specific actionable advice to improve mood",
+  "tagCorrelation": "Analysis of which activities/tags correlate with mood changes",
+  "sentimentMoodMapping": "How journal entry length/content relates to mood",
+  "moodSpikeDetection": "Notable mood changes and their potential causes",
+  "timeOfDayInsights": "When mood is typically highest/lowest and why",
+  "weekdayPatterns": "Day-of-week mood patterns and insights",
+  "predictiveInsights": "Prediction of future mood trends based on current patterns",
+  "customTitle": "Creative title for this mood period (e.g., 'Monday Meltdowns', 'Weekend Recharge')",
+  "riskFactors": "Any concerning patterns that need attention",
+  "positivePatterns": "Mood-boosting activities and circumstances to encourage"
+}
+
+Focus on actionable insights that help understand mood patterns and improve mental wellness.`;
+
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: GROQ_MODEL,
+      temperature: 0.3,
+      max_tokens: 2000,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    
+    if (!response) {
+      throw new Error('No response received from Groq AI');
+    }
+
+    // --- Robust JSON parsing logic ---
+    let insights = null;
+    let cleanText = response.trim();
+    // Remove code block markers if present
+    if (cleanText.startsWith('```json')) {
+      cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanText.startsWith('```')) {
+      cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    // Try to extract JSON object
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+    }
+    try {
+      insights = JSON.parse(cleanText);
+    } catch (parseError) {
+      console.warn('Failed to parse JSON response, returning text insights:', parseError);
+      // Fallback: return as before
+      return {
+        weeklyMoodSummary: response,
+        triggerPatternDetection: "Unable to parse detailed analysis",
+        behavioralSuggestion: "Please try again for detailed recommendations",
+        tagCorrelation: "Analysis unavailable",
+        sentimentMoodMapping: "Analysis unavailable",
+        moodSpikeDetection: "Analysis unavailable",
+        timeOfDayInsights: "Analysis unavailable",
+        weekdayPatterns: "Analysis unavailable",
+        predictiveInsights: "Analysis unavailable",
+        customTitle: "Mood Analysis",
+        riskFactors: "None identified",
+        positivePatterns: "Continue current practices"
+      };
+    }
+    return insights;
+  } catch (error) {
+    console.error('Advanced mood insights generation failed:', error);
+    throw new Error(`Failed to generate advanced mood insights: ${error.message}`);
+  }
+};
+
+/**
+ * Analyze best and most challenging day using Groq AI (Llama 3)
+ * @param {Array} entries - Array of mood entries for the month [{date, mood, emoji, notes}]
+ * @returns {Promise<Object>} - { bestDay: {date, mood, emoji, reason}, challengingDay: {date, mood, emoji, reason} }
+ */
+export const analyzeBestAndChallengingDay = async (entries) => {
+  if (!API_KEY) {
+    throw new Error('Groq API key not configured. Please add VITE_GROQ_API_KEY to your .env file.');
+  }
+  if (!groq) {
+    throw new Error('Groq client not initialized. Please check your API key configuration.');
+  }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error('No mood entries provided for analysis.');
+  }
+
+  const prompt = `You are a mental health assistant. Given the following mood entries for a user (each with date, mood score 1-5, emoji, and notes), analyze both the mood/emoji and the notes. Determine:
+1. The most positive (best) day of the month
+2. The most challenging day of the month
+
+For each, return:
+- date
+- mood score
+- emoji
+- a short reason (based on both mood/emoji and notes)
+
+Respond ONLY in this JSON format:
+{
+  "bestDay": { "date": "YYYY-MM-DD", "mood": 1-5, "emoji": "", "reason": "..." },
+  "challengingDay": { "date": "YYYY-MM-DD", "mood": 1-5, "emoji": "", "reason": "..." }
+}
+
+Mood entries:
+${JSON.stringify(entries, null, 2)}
+`;
+
+  try {
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: "user", content: prompt }
+      ],
+      model: GROQ_MODEL,
+      temperature: 0.2,
+      max_tokens: 512,
+    });
+    const text = completion.choices[0]?.message?.content;
+    if (!text) throw new Error('No response from Groq AI');
+    // Try to parse JSON
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      // Try to extract JSON from text
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        result = JSON.parse(match[0]);
+      } else {
+        throw new Error('Could not parse AI response as JSON');
+      }
+    }
+    return result;
+  } catch (error) {
+    console.error('Groq AI error (best/challenging day):', error);
+    throw new Error('Groq AI error: ' + (error.message || 'Unknown error'));
+  }
+};
+
 export default {
   analyzeSymptoms,
   refineAnalysis,
   validateSymptoms,
-  generateMoodRecommendations
+  generateMoodRecommendations,
+  generateAdvancedMoodInsights,
+  analyzeBestAndChallengingDay
 };

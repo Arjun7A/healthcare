@@ -1,10 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { generateMoodRecommendations } from '../../../lib/aiService';
+import { generateMoodRecommendations, analyzeBestAndChallengingDay } from '../../../lib/aiService';
 
 const MoodInsights = ({ entries }) => {
   const [aiRecommendations, setAiRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [recommendationError, setRecommendationError] = useState('');
+  const [aiInsights, setAiInsights] = useState(null);
+  const [loadingAIInsights, setLoadingAIInsights] = useState(false);
+  const [aiInsightsError, setAiInsightsError] = useState('');
 
   const insights = useMemo(() => {
     if (!entries || entries.length === 0) {
@@ -151,6 +154,34 @@ const MoodInsights = ({ entries }) => {
     generateRecommendations();
   }, [insights]);
 
+  useEffect(() => {
+    const fetchAIInsights = async () => {
+      if (!entries || entries.length === 0) {
+        setAiInsights(null);
+        return;
+      }
+      setLoadingAIInsights(true);
+      setAiInsightsError('');
+      try {
+        // Prepare entries for Groq (date, mood, emoji, notes)
+        const aiEntries = entries.map(e => ({
+          date: e.date || e.timestamp || '',
+          mood: e.mood,
+          emoji: e.emoji || '',
+          notes: e.notes || ''
+        }));
+        const result = await analyzeBestAndChallengingDay(aiEntries);
+        setAiInsights(result);
+      } catch (err) {
+        setAiInsightsError(err.message);
+        setAiInsights(null);
+      } finally {
+        setLoadingAIInsights(false);
+      }
+    };
+    fetchAIInsights();
+  }, [entries]);
+
   if (insights.totalEntries === 0) {
     return (
       <div className="mood-insights">
@@ -165,6 +196,30 @@ const MoodInsights = ({ entries }) => {
   return (
     <div className="mood-insights">
       <h3 className="insights-title">Your Mood Insights</h3>
+      {loadingAIInsights ? (
+        <div className="ai-loading">Analyzing your mood with AI...</div>
+      ) : aiInsightsError ? (
+        <div className="ai-error">AI Analysis Error: {aiInsightsError}</div>
+      ) : aiInsights ? (
+        <div className="ai-insights">
+          <div className="insight-card">
+            <div className="insight-header">
+              <h4>Best Day</h4>
+              <span className="insight-icon">{aiInsights.bestDay.emoji}</span>
+            </div>
+            <div className="insight-value">{aiInsights.bestDay.date}</div>
+            <div className="insight-detail">{aiInsights.bestDay.reason}</div>
+          </div>
+          <div className="insight-card">
+            <div className="insight-header">
+              <h4>Challenging Day</h4>
+              <span className="insight-icon">{aiInsights.challengingDay.emoji}</span>
+            </div>
+            <div className="insight-value">{aiInsights.challengingDay.date}</div>
+            <div className="insight-detail">{aiInsights.challengingDay.reason}</div>
+          </div>
+        </div>
+      ) : null}
       
       {/* Overview Stats */}
       <div className="insights-grid">
