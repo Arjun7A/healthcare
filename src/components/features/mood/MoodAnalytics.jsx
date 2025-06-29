@@ -393,13 +393,6 @@ const MoodAnalytics = ({ entries }) => {
     }
   };
 
-  // Instead, clear AI results when filters/timeframe change
-  useEffect(() => {
-    setInsights(null);
-    setAdvancedInsights(null);
-    setAdvancedInsightsError("");
-  }, [filteredEntries]);
-
   // Export functionality
   const exportData = async (format) => {
     if (!filteredEntries || filteredEntries.length === 0) return;
@@ -485,13 +478,6 @@ const MoodAnalytics = ({ entries }) => {
                 onClick={() => setShowExportModal(true)}
               >
                 📊 Export Data
-              </button>
-              <button 
-                className="export-btn"
-                onClick={() => exportData('pdf')}
-                style={{ marginLeft: '8px' }}
-              >
-                🖨️ Export PDF
               </button>
               <button 
                 className="insights-btn"

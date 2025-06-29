@@ -189,7 +189,7 @@ const MoodCalendar = ({ entries, onDateSelect }) => {
             {monthEntries.length === 0 ? (
               <div className="mood-summary-stats">
                 <div className="mood-summary-stat-label">No mood entries this month yet.</div>
-      </div>
+              </div>
             ) : (
               <div className="mood-summary-stats">
                 <div className="mood-summary-stat-label">Entries:</div>

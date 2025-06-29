@@ -1,10 +1,9 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
 export const generatePDFReport = async (analyticsData, timeframe) => {
   const doc = new jsPDF();
-  autoTable(doc);
   
   // Add title
   doc.setFontSize(24);
